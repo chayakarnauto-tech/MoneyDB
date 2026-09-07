@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onMonthChange,
   onOpenAddModal,
 }) => {
-  const { user, signInWithGoogle, signOutUser } = useAuth();
+  const { user, isGuest, signInWithGoogle, signOutUser } = useAuth();
 
   const handlePrevMonth = () => {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -134,12 +134,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                   <div className="hidden lg:block text-left">
                     <p className="text-xs font-semibold text-slate-800 line-clamp-1 max-w-[130px]">
-                      {user.displayName || 'ผู้ใช้งาน'}
+                      {isGuest ? 'โหมดทดลองใช้' : (user.displayName || 'ผู้ใช้งาน')}
                     </p>
                     <p className="text-[11px] text-slate-400 line-clamp-1 max-w-[130px]">
-                      {user.email}
+                      {isGuest ? 'ออฟไลน์ / Local' : user.email}
                     </p>
                   </div>
+                  {isGuest && (
+                    <button
+                      id="btn-guest-connect-google"
+                      onClick={signInWithGoogle}
+                      title="เข้าสู่ระบบด้วย Google เพื่อซิงก์ข้อมูลลงคลาวด์"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors"
+                    >
+                      <LogIn className="w-3.5 h-3.5 text-amber-600" />
+                      <span>ซิงก์ Google</span>
+                    </button>
+                  )}
                   <button
                     id="btn-logout"
                     onClick={signOutUser}

@@ -35,7 +35,7 @@ import { getCurrentMonthString, formatMonthYear } from './utils/formatters';
 import { Sparkles, Loader2, Database } from 'lucide-react';
 
 const MainDashboard: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isGuest, loading: authLoading } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthString());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
@@ -46,10 +46,68 @@ const MainDashboard: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState<boolean>(false);
 
-  // 1. Listen for user transactions in real-time
+  // Helper for guest storage keys
+  const GUEST_TX_KEY = 'moneydb_guest_transactions';
+  const getGuestBudgetKey = (month: string) => `moneydb_guest_budget_${month}`;
+
+  // 1. Listen for user transactions (Firestore or LocalStorage for Guest)
   useEffect(() => {
     if (!user) {
       setTransactions([]);
+      setLoadingData(false);
+      return;
+    }
+
+    if (isGuest) {
+      setLoadingData(true);
+      const stored = localStorage.getItem(GUEST_TX_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setTransactions(parsed);
+        } catch {
+          setTransactions([]);
+        }
+      } else {
+        // Seed default sample data for guest preview
+        const initialSample: Transaction[] = [
+          {
+            id: 'sample-1',
+            userId: user.uid,
+            type: 'income',
+            amount: 45000,
+            category: 'เงินเดือน/โบนัส',
+            date: `${selectedMonth}-01`,
+            note: 'เงินเดือนประจำเดือน',
+            paymentMethod: 'โอนเงิน/QR PromptPay',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'sample-2',
+            userId: user.uid,
+            type: 'expense',
+            amount: 8500,
+            category: 'ค่าที่พัก/ค่าน้ำค่าไฟ',
+            date: `${selectedMonth}-03`,
+            note: 'ค่าเช่าและค่าน้ำค่าไฟ',
+            paymentMethod: 'โอนเงิน/QR PromptPay',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'sample-3',
+            userId: user.uid,
+            type: 'expense',
+            amount: 3200,
+            category: 'อาหารและเครื่องดื่ม',
+            date: `${selectedMonth}-05`,
+            note: 'ซื้อของสดและอาหารเข้าบ้าน',
+            paymentMethod: 'โอนเงิน/QR PromptPay',
+            createdAt: new Date().toISOString(),
+          },
+        ];
+        localStorage.setItem(GUEST_TX_KEY, JSON.stringify(initialSample));
+        setTransactions(initialSample);
+      }
       setLoadingData(false);
       return;
     }
@@ -89,12 +147,22 @@ const MainDashboard: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, isGuest, selectedMonth]);
 
   // 2. Fetch monthly budget for selected month
   useEffect(() => {
     if (!user) {
       setMonthlyLimit(0);
+      return;
+    }
+
+    if (isGuest) {
+      const storedBudget = localStorage.getItem(getGuestBudgetKey(selectedMonth));
+      if (storedBudget) {
+        setMonthlyLimit(Number(storedBudget) || 0);
+      } else {
+        setMonthlyLimit(20000);
+      }
       return;
     }
 
@@ -116,7 +184,7 @@ const MainDashboard: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [user, selectedMonth]);
+  }, [user, isGuest, selectedMonth]);
 
   // Transactions filtered by selected month
   const currentMonthTransactions = useMemo(() => {
@@ -146,6 +214,34 @@ const MainDashboard: React.FC = () => {
     paymentMethod: string;
   }) => {
     if (!user) return;
+
+    if (isGuest) {
+      if (editingTransaction) {
+        const updatedList = transactions.map((t) =>
+          t.id === editingTransaction.id
+            ? { ...t, ...data }
+            : t
+        );
+        setTransactions(updatedList);
+        localStorage.setItem(GUEST_TX_KEY, JSON.stringify(updatedList));
+      } else {
+        const newTx: Transaction = {
+          id: `guest_tx_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          userId: user.uid,
+          type: data.type,
+          amount: data.amount,
+          category: data.category,
+          date: data.date,
+          note: data.note,
+          paymentMethod: data.paymentMethod,
+          createdAt: new Date().toISOString(),
+        };
+        const updatedList = [newTx, ...transactions];
+        setTransactions(updatedList);
+        localStorage.setItem(GUEST_TX_KEY, JSON.stringify(updatedList));
+      }
+      return;
+    }
 
     const path = 'transactions';
     try {
@@ -182,6 +278,13 @@ const MainDashboard: React.FC = () => {
   };
 
   const handleDeleteTransaction = async (id: string) => {
+    if (isGuest) {
+      const updatedList = transactions.filter((t) => t.id !== id);
+      setTransactions(updatedList);
+      localStorage.setItem(GUEST_TX_KEY, JSON.stringify(updatedList));
+      return;
+    }
+
     const path = `transactions/${id}`;
     try {
       await deleteDoc(doc(db, 'transactions', id));
@@ -192,6 +295,13 @@ const MainDashboard: React.FC = () => {
 
   const handleSaveBudget = async (limit: number) => {
     if (!user) return;
+
+    if (isGuest) {
+      setMonthlyLimit(limit);
+      localStorage.setItem(getGuestBudgetKey(selectedMonth), limit.toString());
+      return;
+    }
+
     const budgetDocId = `${user.uid}_${selectedMonth}`;
     const path = `budgets/${budgetDocId}`;
     try {
@@ -263,6 +373,28 @@ const MainDashboard: React.FC = () => {
         paymentMethod: 'โอนเงิน/QR PromptPay',
       },
     ];
+
+    if (isGuest) {
+      const generated: Transaction[] = sampleItems.map((item, idx) => ({
+        id: `guest_tx_seed_${Date.now()}_${idx}`,
+        userId: user.uid,
+        type: item.type,
+        amount: item.amount,
+        category: item.category,
+        date: item.date,
+        note: item.note,
+        paymentMethod: item.paymentMethod,
+        createdAt: new Date().toISOString(),
+      }));
+      const updated = [...generated, ...transactions];
+      setTransactions(updated);
+      localStorage.setItem(GUEST_TX_KEY, JSON.stringify(updated));
+      if (monthlyLimit === 0) {
+        setMonthlyLimit(25000);
+        localStorage.setItem(getGuestBudgetKey(selectedMonth), '25000');
+      }
+      return;
+    }
 
     try {
       for (const item of sampleItems) {

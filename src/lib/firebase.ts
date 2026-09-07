@@ -16,9 +16,10 @@ const activeConfig = {
 const app = getApps().length === 0 ? initializeApp(activeConfig) : getApps()[0];
 
 // CRITICAL: Bind to custom firestoreDatabaseId if specified, else default
-export const db = activeConfig.firestoreDatabaseId
-  ? getFirestore(app, activeConfig.firestoreDatabaseId)
-  : getFirestore(app);
+export const db =
+  activeConfig.firestoreDatabaseId && activeConfig.firestoreDatabaseId !== '(default)'
+    ? getFirestore(app, activeConfig.firestoreDatabaseId)
+    : getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 

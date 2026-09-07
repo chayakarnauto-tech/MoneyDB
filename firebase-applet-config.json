@@ -1,12 +1,12 @@
 {
-  "projectId": "peppy-analog-vvk22",
-  "appId": "1:75299744385:web:9c4bf3d8f88ec229c43b80",
-  "apiKey": "AIzaSyAWho_SDp16ulb6kM-99w1UY7Wg8BSpOGw",
-  "authDomain": "peppy-analog-vvk22.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-b78c74dd-b3b6-45f8-9e5f-6e030c13ddf3",
-  "storageBucket": "peppy-analog-vvk22.firebasestorage.app",
-  "messagingSenderId": "75299744385",
+  "projectId": "moneydb-ef295",
+  "appId": "1:198494241353:web:263e37ab5831e404707598",
+  "apiKey": "AIzaSyCmaw06cqf-E-jF43yy20Wl7qP-QocACgQ",
+  "authDomain": "moneydb-ef295.firebaseapp.com",
+  "firestoreDatabaseId": "",
+  "storageBucket": "moneydb-ef295.firebasestorage.app",
+  "messagingSenderId": "198494241353",
   "measurementId": "",
-  "oAuthClientId": "75299744385-7g7g83fpkg8esak6h0f9fjd7glq61buu.apps.googleusercontent.com",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

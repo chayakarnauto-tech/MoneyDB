@@ -25,6 +25,7 @@ interface AuthContextType {
   signOutUser: () => Promise<void>;
   authError: string | null;
   isUnauthorizedDomain?: boolean;
+  isOperationNotAllowed?: boolean;
   currentDomain?: string;
   clearError: () => void;
 }
@@ -47,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isUnauthorizedDomain, setIsUnauthorizedDomain] = useState<boolean>(false);
+  const [isOperationNotAllowed, setIsOperationNotAllowed] = useState<boolean>(false);
   const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
 
   useEffect(() => {
@@ -105,16 +107,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsGuest(true);
     setAuthError(null);
     setIsUnauthorizedDomain(false);
+    setIsOperationNotAllowed(false);
   };
 
   const signInWithGoogle = async () => {
     try {
       setAuthError(null);
       setIsUnauthorizedDomain(false);
+      setIsOperationNotAllowed(false);
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error('Google Sign In Error:', error);
-      if (error?.code === 'auth/unauthorized-domain') {
+      if (error?.code === 'auth/operation-not-allowed') {
+        setIsOperationNotAllowed(true);
+        setAuthError(
+          'ยังไม่ได้เปิดใช้งาน Google Sign-in ใน Firebase Console (auth/operation-not-allowed)'
+        );
+      } else if (error?.code === 'auth/unauthorized-domain') {
         setIsUnauthorizedDomain(true);
         setAuthError(
           `โดเมน ${window.location.hostname} ยังไม่ได้รับอนุญาตใน Firebase Authentication (auth/unauthorized-domain)`
@@ -133,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setAuthError(null);
       setIsUnauthorizedDomain(false);
+      setIsOperationNotAllowed(false);
       localStorage.removeItem(GUEST_STORAGE_KEY);
       setIsGuest(false);
       setUser(null);
@@ -146,6 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearError = () => {
     setAuthError(null);
     setIsUnauthorizedDomain(false);
+    setIsOperationNotAllowed(false);
   };
 
   return (
@@ -159,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOutUser,
         authError,
         isUnauthorizedDomain,
+        isOperationNotAllowed,
         currentDomain,
         clearError,
       }}
